@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PWA Automator Pro - it.adi.p</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155; transition: .4s; border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #3b82f6; }
+        input:checked + .slider:before { transform: translateX(18px); }
+
+        #previewModal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: none; flex-direction: column;
+        }
+        
+        iframe { background: white; width: 100%; height: 100%; border: none; }
+    </style>
+
+    <!-- PWA Settings -->
+    <meta name="theme-color" content="#0000ff">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+                
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-xl w-full mx-auto">
+        <div class="glass-card p-6 md:p-8 rounded-[2.5rem] shadow-2xl">
+            
+            <header class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-14 h-14 bg-blue-600 rounded-2xl mb-4 shadow-lg shadow-blue-600/30">
+                    <i data-lucide="zap" class="text-white"></i>
+                </div>
+                <h1 class="text-2xl font-extrabold tracking-tight">PWA <span class="text-blue-500">Master</span></h1>
+                <p class="text-slate-400 text-[10px] uppercase tracking-[0.3em] mt-1 font-bold">it.adi.p Automotive</p>
+            </header>
+
+            <div class="space-y-4 mb-6">
+                <!-- App Info -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-900/50 p-3 rounded-2xl border border-white/5">
+                        <label class="text-[9px] font-bold text-slate-500 uppercase block mb-1">Nama App</label>
+                        <input type="text" id="appName" value="My App" class="bg-transparent border-none outline-none text-white text-sm font-bold w-full">
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded-2xl border border-white/5 flex items-center justify-between">
+                        <label class="text-[9px] font-bold text-slate-500 uppercase">Warna</label>
+                        <input type="color" id="themeColor" value="#3b82f6" class="w-6 h-6 bg-transparent border-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Toggles -->
+                <div class="space-y-2">
+                    <div class="bg-slate-900/50 p-4 rounded-2xl flex items-center justify-between border border-white/5">
+                        <span class="text-xs font-bold">Lisensi it.adi.p</span>
+                        <label class="switch"><input type="checkbox" id="copyToggle" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="bg-slate-900/50 p-4 rounded-2xl flex items-center justify-between border border-white/5">
+                        <span class="text-xs font-bold">Splash Screen</span>
+                        <label class="switch"><input type="checkbox" id="welcomeToggle" checked><span class="slider"></span></label>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 p-3 rounded-2xl border border-white/5">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase block mb-1">Welcome Text</label>
+                    <input type="text" id="welcomeText" value="Selamat Datang" class="bg-transparent border-none outline-none text-white text-sm font-bold w-full">
+                </div>
+            </div>
+
+            <!-- Upload -->
+            <div id="dropZone" class="border-2 border-dashed border-slate-700 rounded-3xl p-6 text-center cursor-pointer hover:border-blue-500 transition-all bg-slate-900/20 mb-6 relative">
+                <input type="file" id="htmlInput" accept=".html" class="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer">
+                <div id="uploadStatus">
+                    <i data-lucide="plus" class="mx-auto text-slate-500 mb-2"></i>
+                    <p class="text-xs text-slate-400">Pilih file <span class="text-blue-500 font-bold">index.html</span></p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div id="btnArea" class="hidden flex flex-col gap-3">
+                <button onclick="handlePreview()" class="w-full bg-slate-700 text-white font-bold py-4 rounded-2xl text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                    <i data-lucide="eye" class="w-4 h-4"></i> Pratinjau
+                </button>
+                <button onclick="handleDownload()" class="w-full bg-blue-600 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-widest shadow-xl shadow-blue-600/20 flex items-center justify-center gap-2">
+                    <i data-lucide="download" class="w-4 h-4"></i> Download PWA (.zip)
+                </button>
+            </div>
+        </div>
+
+        <footer class="mt-8 text-center opacity-50">
+            <p class="text-[10px] font-black tracking-[0.5em] mb-1">ENGINEERED BY</p>
+            <p class="text-sm font-bold">it.adi.p <span class="text-blue-500">© 2024</span></p>
+        </footer>
+    </div>
+
+    <!-- Modal Pratinjau -->
+    <div id="previewModal">
+        <div class="h-14 bg-slate-900 flex items-center justify-between px-4 border-b border-white/10">
+            <span class="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Simulator PWA it.adi.p</span>
+            <button onclick="closePreview()" class="bg-red-600 px-4 py-1.5 rounded-lg text-[10px] font-black text-white">TUTUP</button>
+        </div>
+        <div class="flex-1 overflow-hidden">
+            <iframe id="previewFrame"></iframe>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let selectedFile = null;
+        let previewUrl = null;
+
+        const htmlInput = document.getElementById('htmlInput');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const btnArea = document.getElementById('btnArea');
+        const previewModal = document.getElementById('previewModal');
+        const previewFrame = document.getElementById('previewFrame');
+
+        htmlInput.onchange = (e) => {
+            if(e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                uploadStatus.innerHTML = `<span class="text-blue-400 font-bold text-xs uppercase tracking-widest">✓ ${selectedFile.name} Siap</span>`;
+                btnArea.classList.remove('hidden');
+                lucide.createIcons();
+            }
+        };
+
+        async function generateHTML() {
+            const html = await selectedFile.text();
+            const color = document.getElementById('themeColor').value;
+            const welcome = document.getElementById('welcomeText').value;
+            const useCopy = document.getElementById('copyToggle').checked;
+            const useSplash = document.getElementById('welcomeToggle').checked;
+
+            const header = `\n  <meta name="theme-color" content="${color}">\n  <link rel="manifest" href="manifest.json">`;
+            
+            let injection = "";
+            if(useSplash) {
+                injection += `\n  <div id="splash" style="position:fixed;top:0;left:0;width:100%;height:100%;background:${color};z-index:999999;display:flex;align-items:center;justify-content:center;color:white;font-family:sans-serif;transition:opacity 0.5s;">\n    <div style="text-align:center;">\n      <h1 style="margin:0;">${welcome}</h1>\n      <p style="font-size:10px;opacity:0.5;margin-top:10px;letter-spacing:2px;">POWERED BY IT.ADI.P</p>\n    </div>\n  </div>\n  <script>window.addEventListener('load',()=>{setTimeout(()=>{const s=document.getElementById('splash');if(s)s.style.opacity='0';setTimeout(()=>s?s.remove():null,500);},2000);});<\/script>`;
+            }
+            if(useCopy) {
+                injection += `\n  <div style="position:fixed;bottom:10px;right:10px;font-size:10px;color:rgba(128,128,128,0.5);z-index:99999;pointer-events:none;font-family:sans-serif;">© it.adi.p</div>`;
+            }
+            injection += `\n  <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./sw.js');});}<\/script>`;
+
+            let res = html;
+            res = res.includes('</head>') ? res.replace('</head>', header + '\n</head>') : header + res;
+            res = res.includes('
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('PWA: Service Worker Registered'))
+            .catch(err => console.log('PWA: Service Worker Failed', err));
+        });
+      }
+    </script>
+                
+</body>') ? res.replace('</body>', injection + '\n</body>') : res + injection;
+            return res;
+        }
+
+        async function handlePreview() {
+            const finalHTML = await generateHTML();
+            if(previewUrl) URL.revokeObjectURL(previewUrl);
+            const blob = new Blob([finalHTML], {type: 'text/html'});
+            previewUrl = URL.createObjectURL(blob);
+            previewFrame.src = previewUrl;
+            previewModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePreview() {
+            previewModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            previewFrame.src = "about:blank";
+        }
+
+        async function handleDownload() {
+            try {
+                const finalHTML = await generateHTML();
+                const name = document.getElementById('appName').value;
+                const color = document.getElementById('themeColor').value;
+                const zip = new JSZip();
+
+                const manifest = {
+                    "name": name, "short_name": name, "start_url": ".", "display": "standalone",
+                    "background_color": "#ffffff", "theme_color": color,
+                    "icons": [{"src":"icon-192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"}]
+                };
+
+                const sw = `const C='pwa-v1';self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(['./','./index.html']))));self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))));`;
+
+                zip.file("index.html", finalHTML);
+                zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+                zip.file("sw.js", sw);
+
+                const blob = await zip.generateAsync({type:"blob"});
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = name.toLowerCase().replace(/\s/g,'_') + "_pwa.zip";
+                a.click();
+            } catch(e) { alert("Error saat membuat ZIP"); }
+        }
+    </script>
+</body>
+</html>
